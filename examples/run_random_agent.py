@@ -26,18 +26,18 @@ import numpy as np
 FLAGS = flags.FLAGS
 
 # Simulator args.
-flags.DEFINE_string('avd_name', None, 'Name of AVD to use.')
+flags.DEFINE_string('avd_name', 'TestAvd', 'Name of AVD to use.')
 flags.DEFINE_string('android_avd_home', '~/.android/avd', 'Path to AVD.')
 flags.DEFINE_string('android_sdk_root', '~/Android/Sdk', 'Path to SDK.')
 flags.DEFINE_string('emulator_path',
                     '~/Android/Sdk/emulator/emulator', 'Path to emulator.')
 flags.DEFINE_string('adb_path',
                     '~/Android/Sdk/platform-tools/adb', 'Path to ADB.')
-flags.DEFINE_bool('run_headless', False,
+flags.DEFINE_bool('run_headless', True,
                   'Whether to display the emulator window.')
 
 # Environment args.
-flags.DEFINE_string('task_path', None, 'Path to task textproto file.')
+flags.DEFINE_string('task_path', '/root/android_env/tasks/mdp_0000.textproto', 'Path to task textproto file.')
 
 # Experiment args.
 flags.DEFINE_integer('num_steps', 1000, 'Number of steps to take.')

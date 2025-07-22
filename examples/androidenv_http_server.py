@@ -3,12 +3,12 @@ import uuid
 from flask import Flask, request, jsonify
 from android_env import loader
 from android_env.components import config_classes
-from android_env.wrappers.gym_wrapper import GymInterfaceWrapper
 import numpy as np
 import time
 import psutil
 from android_env.proto import adb_pb2, state_pb2
 from google.protobuf.json_format import MessageToDict, ParseDict
+from absl import logging
 
 app = Flask(__name__)
 
@@ -32,18 +32,36 @@ class EnvInfo:
 envs = {}
 envs_lock = threading.Lock()
 
-def make_env(config_path):
+def make_env(task_config_path, emulator_path, android_sdk_root, android_avd_home, avd_name, run_headless, adb_path):
     config = config_classes.AndroidEnvConfig(
-        task=config_classes.FilesystemTaskConfig(path=config_path)
+        task=config_classes.FilesystemTaskConfig(path=task_config_path),
+        simulator=config_classes.EmulatorConfig(
+            emulator_launcher=config_classes.EmulatorLauncherConfig(
+                emulator_path=emulator_path,
+                android_sdk_root=android_sdk_root,
+                android_avd_home=android_avd_home,
+                avd_name=avd_name,
+                run_headless=run_headless,
+            ),
+            adb_controller=config_classes.AdbControllerConfig(
+                adb_path=adb_path
+          ),
+        ),
     )
     env = loader.load(config)
-    return GymInterfaceWrapper(env)
+    return env
 
 @app.route('/v1/envs', methods=['POST'])
 def create_env():
     data = request.get_json()
-    config_path = data.get('config_path', '')
-    env = make_env(config_path)
+    task_config_path = data.get('task_config_path', None)
+    emulator_path = data.get('emulator_path', '~/Android/Sdk/emulator/emulator')
+    android_sdk_root = data.get('android_sdk_root', '~/Android/Sdk')
+    android_avd_home = data.get('android_avd_home', '~/.android/avd')
+    avd_name = data.get('avd_name', None)
+    run_headless = data.get('run_headless', True)
+    adb_path = data.get('adb_path', '~/Android/Sdk/platform-tools/adb')
+    env = make_env(task_config_path, emulator_path, android_sdk_root, android_avd_home, avd_name, run_headless, adb_path)
     env_id = str(uuid.uuid4())
     with envs_lock:
         envs[env_id] = EnvInfo(env)
@@ -248,4 +266,6 @@ def _space_to_dict(space):
     return d
 
 if __name__ == '__main__':
+    logging.set_verbosity('info')
+    logging.set_stderrthreshold('info')
     app.run(host='0.0.0.0', port=5000, threaded=True) 
