@@ -41,9 +41,9 @@ class DeviceSettingsConfig:
   """Config class for DeviceSettings."""
 
   # Whether to show circles on the screen indicating touch position.
-  show_touches: bool = True
+  show_touches: bool = False
   # Whether to show blue lines on the screen indicating touch position.
-  show_pointer_location: bool = True
+  show_pointer_location: bool = False
   # Whether or not to show the status (top) bar.
   show_status_bar: bool = False
   # Whether or not to show the navigation (bottom) bar.
