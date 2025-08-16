@@ -1,0 +1,21 @@
+# 最简单的AndroidEnv Task配置
+id: "dummy_task"
+name: "Dummy Task Example"
+description: "A minimal task configuration for AndroidEnv"
+reset_steps: [
+  {
+    adb_request: {
+      generic: {
+        args: ["shell", "am", "kill-all"]
+      }
+    }
+  },
+  {
+    adb_request: {
+      press_button: { button: HOME }
+    }
+  },
+  {
+    sleep: { time_sec: 0.5 }
+  }
+]
