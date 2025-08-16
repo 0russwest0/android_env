@@ -64,9 +64,9 @@ def _pick_adb_port() -> int:
     port: an available port for adb.
   """
 
-  for p in range(5555, 5587, 2):
-    if portpicker.is_port_free(p):
-      return p
+  # for p in range(5555, 5587, 2):
+  #   if portpicker.is_port_free(p):
+  #     return p
   return portpicker.pick_unused_port()
 
 
@@ -80,10 +80,11 @@ def _pick_emulator_grpc_port() -> int:
     port: an available port for emulator grpc.
   """
 
-  if portpicker.is_port_free(8554):
-    return 8554
-  else:
-    return portpicker.pick_unused_port()
+  # if portpicker.is_port_free(8554):
+  #   return 8554
+  # else:
+  #   return portpicker.pick_unused_port()
+  return portpicker.pick_unused_port()
 
 
 class EmulatorBootError(errors.SimulatorError):
