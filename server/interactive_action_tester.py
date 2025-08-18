@@ -157,6 +157,14 @@ class InteractiveClient:
         """Gets the full server status."""
         return self._make_request('GET', '/server_status')
 
+    def get_observation_spec(self):
+        """Gets the observation spec for the current environment."""
+        if not self.env_id:
+            print("---! No active environment. Start a session first.")
+            return None
+        print(f"--> Fetching observation_spec for {self.env_id}...")
+        return self._make_request('GET', f'/envs/{self.env_id}/observation_spec')
+
     def release(self):
         """Releases the environment back to the pool."""
         print(f"--> Releasing environment {self.env_id}...")
@@ -178,6 +186,7 @@ class InteractiveClient:
         print("Enter an action as a JSON string. Special commands:")
         print("  help              - Show this help message.")
         print("  status            - Get the current server status.")
+        print("  obs_spec          - Print observation_spec of the current environment.")
         print("  reset             - Reset the current environment.")
         print("  release           - Release the env (sleep) and get a new one.")
         print("  quit / exit       - Close the environment and exit the script.")
@@ -209,6 +218,12 @@ def main_loop(client):
             
             elif user_input.lower() == 'status':
                 pprint(client.get_status())
+                continue
+
+            elif user_input.lower() in ['obs_spec', 'spec']:
+                spec = client.get_observation_spec()
+                if spec is not None:
+                    pprint(spec)
                 continue
 
             elif user_input.lower() == 'reset':
