@@ -22,6 +22,13 @@ from android_env import env_interface as ae_interface
 from android_env import loader as ae_loader
 from android_env.components import config_classes as ae_config
 from android_env.proto import state_pb2
+try:
+  # Optional import; only used when wrapper is enabled
+  from android_env.wrappers.mobile_agent_action_wrapper import (
+      MobileAgentActionWrapper,
+  )
+except Exception:  # pylint: disable=broad-except
+  MobileAgentActionWrapper = None  # type: ignore
 
 
 class SpecField(pydantic.BaseModel):
@@ -111,7 +118,9 @@ async def lifespan(app: fastapi.FastAPI):
             ),
         )
         try:
-          app.state.android_env = ae_loader.load(cfg)
+          env = ae_loader.load(cfg)
+          env = _apply_wrappers(env)
+          app.state.android_env = env
         except Exception as exc:
           # Don't block server startup; just warn and continue.
           import logging as _logging  # local import to avoid global if removed
@@ -135,7 +144,9 @@ async def lifespan(app: fastapi.FastAPI):
             ),
         )
         try:
-          app.state.android_env = ae_loader.load(cfg)
+          env = ae_loader.load(cfg)
+          env = _apply_wrappers(env)
+          app.state.android_env = env
         except Exception as exc:
           import logging as _logging  # local import
           _logging.warning("Autoload failed (fake): %s", exc)
@@ -178,6 +189,28 @@ def _spec_to_model(spec_obj: Any, name: str | None = None) -> SpecField:
   minimum = _to_jsonable(getattr(spec_obj, "minimum", None))
   maximum = _to_jsonable(getattr(spec_obj, "maximum", None))
   return SpecField(name=name, shape=shape, dtype=dtype, minimum=minimum, maximum=maximum)
+
+
+def _apply_wrappers(
+    env: ae_interface.AndroidEnvInterface, wrapper_name: str | None = None
+) -> ae_interface.AndroidEnvInterface:
+  """Applies configured wrappers to the env.
+
+  wrapper_name: optional explicit wrapper name. If None, read
+    ANDROID_ENV_WRAPPER from environment. Supported values:
+      - "mobile_agent" (default)
+      - "none"
+  """
+  name = (wrapper_name or os.environ.get("ANDROID_ENV_WRAPPER", "mobile_agent")).strip().lower()
+  if name in {"", "none", "off", "false"}:
+    return env
+  if name in {"mobile_agent", "mobile"}:
+    if MobileAgentActionWrapper is None:
+      # Wrapper not available; return original env
+      return env
+    return MobileAgentActionWrapper(env)
+  # Unknown wrapper directive; leave unchanged
+  return env
 
 
 def _timestep_to_response(ts: Any, include_pixels: bool) -> StepResponse:
