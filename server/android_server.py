@@ -278,13 +278,13 @@ async def get_specs(app_env: AndroidEnvDep):
 
 
 @app.post("/reset")
-async def reset(include_pixels: bool = False, app_env: AndroidEnvDep = fastapi.Depends()):
+async def reset(app_env: AndroidEnvDep, include_pixels: bool = False):
   ts = app_env.reset()
   return _timestep_to_response(ts, include_pixels=include_pixels).model_dump()
 
 
 @app.post("/step")
-async def step(action: dict[str, typing.Any], include_pixels: bool = False, app_env: AndroidEnvDep = fastapi.Depends()):
+async def step(app_env: AndroidEnvDep, action: dict[str, typing.Any], include_pixels: bool = False):
   # Convert inputs to numpy arrays where applicable
   np_action: dict[str, np.ndarray] = {}
   for k, v in action.items():
@@ -297,7 +297,7 @@ async def step(action: dict[str, typing.Any], include_pixels: bool = False, app_
 
 
 @app.get("/observation")
-async def get_observation(include_pixels: bool = False, app_env: AndroidEnvDep = fastapi.Depends()):
+async def get_observation(app_env: AndroidEnvDep, include_pixels: bool = False):
   obs = app_env.raw_observation
   out: dict[str, Any] = {}
   for k, v in obs.items():
@@ -310,7 +310,7 @@ async def get_observation(include_pixels: bool = False, app_env: AndroidEnvDep =
 
 
 @app.get("/screenshot")
-async def get_screenshot(flatten: bool = True, app_env: AndroidEnvDep = fastapi.Depends()):
+async def get_screenshot(app_env: AndroidEnvDep, flatten: bool = True):
   obs = app_env.raw_observation
   pixels = np.asarray(obs.get("pixels")) if obs else None
   if pixels is None:
@@ -325,12 +325,12 @@ async def get_screenshot(flatten: bool = True, app_env: AndroidEnvDep = fastapi.
 
 
 @app.get("/stats")
-async def get_stats(app_env: AndroidEnvDep = fastapi.Depends()):
+async def get_stats(app_env: AndroidEnvDep):
   return app_env.stats()
 
 
 @app.post("/save_state")
-async def save_state(req: SaveOrLoadStateRequest, app_env: AndroidEnvDep = fastapi.Depends()):
+async def save_state(req: SaveOrLoadStateRequest, app_env: AndroidEnvDep):
   response = app_env.save_state(state_pb2.SaveStateRequest(args=dict(req.args)))
   return {
       "status": int(response.status),
@@ -340,7 +340,7 @@ async def save_state(req: SaveOrLoadStateRequest, app_env: AndroidEnvDep = fasta
 
 
 @app.post("/load_state")
-async def load_state(req: SaveOrLoadStateRequest, app_env: AndroidEnvDep = fastapi.Depends()):
+async def load_state(req: SaveOrLoadStateRequest, app_env: AndroidEnvDep):
   response = app_env.load_state(state_pb2.LoadStateRequest(args=dict(req.args)))
   return {
       "status": int(response.status),
