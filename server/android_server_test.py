@@ -13,7 +13,7 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
-from android_env.server.android_server import app
+from server.android_server import app
 
 
 def _dummy_task_path() -> str:

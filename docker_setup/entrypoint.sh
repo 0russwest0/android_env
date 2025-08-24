@@ -86,6 +86,6 @@ ensure_avd
 # Start Emulator headless then start server
 ./docker_setup/start_emu_headless.sh
 adb root || true
-python3 -m android_env.server.android_server | cat
+python3 -m server.android_server | cat
 
 
