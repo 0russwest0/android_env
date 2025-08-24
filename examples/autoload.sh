@@ -1,5 +1,5 @@
 docker run --rm \
-  -p 5001:5001 -p 8554:8554 \
+  -p 5000:5000 -p 8554:8554 \
   --device /dev/kvm \
   -e ANDROID_ENV_AUTOLOAD=true \
   -e ANDROID_ENV_MODE=emulator \

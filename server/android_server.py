@@ -41,14 +41,14 @@ class StepResponse(pydantic.BaseModel):
 
 class LoadEmulatorRequest(pydantic.BaseModel):
   task_path: str
-  emulator_path: str = "~/Android/Sdk/emulator/emulator"
-  android_sdk_root: str = "~/Android/Sdk"
+  emulator_path: str = "/opt/android/emulator/emulator"
+  android_sdk_root: str = "/opt/android"
   avd_name: str = ""
   android_avd_home: str = "~/.android/avd"
   snapshot_name: str = ""
   run_headless: bool = True
   gpu_mode: str = ae_config.GPUMode.SWIFTSHADER_INDIRECT.value
-  adb_path: str = "~/Android/Sdk/platform-tools/adb"
+  adb_path: str = "/opt/android/platform-tools/adb"
   adb_server_port: int = 5037
   device_name: str = ""
   verbose_logs: bool = False
@@ -84,35 +84,22 @@ async def lifespan(app: fastapi.FastAPI):
       if mode == "emulator" and task_path:
         req = LoadEmulatorRequest(
             task_path=task_path,
-            emulator_path=os.environ.get("EMULATOR_PATH", "~/Android/Sdk/emulator/emulator"),
-            android_sdk_root=os.environ.get("ANDROID_SDK_ROOT", "~/Android/Sdk"),
-            avd_name=os.environ.get("AVD_NAME", ""),
-            android_avd_home=os.environ.get("ANDROID_AVD_HOME", "~/.android/avd"),
-            snapshot_name=os.environ.get("SNAPSHOT_NAME", ""),
-            run_headless=os.environ.get("RUN_HEADLESS", "true").lower() in {"1", "true", "yes"},
-            gpu_mode=os.environ.get("GPU_MODE", ae_config.GPUMode.SWIFTSHADER_INDIRECT.value),
-            adb_path=os.environ.get("ADB_PATH", "~/Android/Sdk/platform-tools/adb"),
+            adb_path=os.environ.get("ADB_PATH", "/opt/android/platform-tools/adb"),
             adb_server_port=int(os.environ.get("ADB_SERVER_PORT", "5037")),
-            device_name=os.environ.get("DEVICE_NAME", ""),
             verbose_logs=os.environ.get("VERBOSE_LOGS", "false").lower() in {"1", "true", "yes"},
             interaction_rate_sec=float(os.environ.get("INTERACTION_RATE_SEC", "0.0")),
-            adb_port=int(os.environ.get("ADB_PORT", "0")),
-            emulator_console_port=int(os.environ.get("EMULATOR_CONSOLE_PORT", "0")),
-            grpc_port=int(os.environ.get("GRPC_PORT", "0")),
+            adb_port=int(os.environ.get("ADB_PORT", "5555")),
+            emulator_console_port=int(os.environ.get("EMULATOR_CONSOLE_PORT", "5554")),
+            grpc_port=int(os.environ.get("GRPC_PORT", "8554")),
         )
+        # Only set the three ports to connect an existing emulator; other
+        # emulator_launcher fields are ignored in this mode.
         cfg = ae_config.AndroidEnvConfig(
             task=ae_config.FilesystemTaskConfig(path=req.task_path),
             simulator=ae_config.EmulatorConfig(
                 verbose_logs=req.verbose_logs,
                 interaction_rate_sec=req.interaction_rate_sec,
                 emulator_launcher=ae_config.EmulatorLauncherConfig(
-                    emulator_path=req.emulator_path,
-                    android_sdk_root=req.android_sdk_root,
-                    avd_name=req.avd_name,
-                    android_avd_home=req.android_avd_home,
-                    snapshot_name=req.snapshot_name,
-                    run_headless=req.run_headless,
-                    gpu_mode=req.gpu_mode,
                     adb_port=req.adb_port,
                     emulator_console_port=req.emulator_console_port,
                     grpc_port=req.grpc_port,
@@ -120,11 +107,22 @@ async def lifespan(app: fastapi.FastAPI):
                 adb_controller=ae_config.AdbControllerConfig(
                     adb_path=req.adb_path,
                     adb_server_port=req.adb_server_port,
-                    device_name=req.device_name,
                 ),
             ),
         )
-        app.state.android_env = ae_loader.load(cfg)
+        try:
+          app.state.android_env = ae_loader.load(cfg)
+        except Exception as exc:
+          # Don't block server startup; just warn and continue.
+          import logging as _logging  # local import to avoid global if removed
+          _logging.warning(
+              "Autoload failed (emulator connect on ports %s/%s/%s): %s",
+              req.adb_port,
+              req.emulator_console_port,
+              req.grpc_port,
+              exc,
+          )
+          app.state.android_env = None
       elif mode == "fake" and task_path:
         screen_h = int(os.environ.get("SCREEN_HEIGHT", "960"))
         screen_w = int(os.environ.get("SCREEN_WIDTH", "540"))
@@ -136,7 +134,12 @@ async def lifespan(app: fastapi.FastAPI):
                 screen_dimensions=(screen_h, screen_w),
             ),
         )
-        app.state.android_env = ae_loader.load(cfg)
+        try:
+          app.state.android_env = ae_loader.load(cfg)
+        except Exception as exc:
+          import logging as _logging  # local import
+          _logging.warning("Autoload failed (fake): %s", exc)
+          app.state.android_env = None
   except Exception:
     # Autoload is best-effort; proceed even if it fails
     app.state.android_env = None
@@ -364,6 +367,6 @@ async def health(request: fastapi.Request):
 
 
 if __name__ == "__main__":
-  uvicorn.run(app, host="0.0.0.0", port=5001)
+  uvicorn.run(app, host="0.0.0.0", port=5000)
 
 
