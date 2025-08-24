@@ -28,8 +28,8 @@ class SpecField(pydantic.BaseModel):
   name: str | None = None
   shape: list[int] | None = None
   dtype: str | None = None
-  minimum: float | int | None = None
-  maximum: float | int | None = None
+  minimum: Any | None = None
+  maximum: Any | None = None
 
 
 class StepResponse(pydantic.BaseModel):
@@ -169,8 +169,14 @@ def _spec_to_model(spec_obj: Any, name: str | None = None) -> SpecField:
   # dm_env specs expose dtype, shape, minimum, maximum sometimes
   shape = list(spec_obj.shape) if getattr(spec_obj, "shape", None) is not None else None
   dtype = str(getattr(spec_obj, "dtype", None)) if getattr(spec_obj, "dtype", None) is not None else None
-  minimum = getattr(spec_obj, "minimum", None)
-  maximum = getattr(spec_obj, "maximum", None)
+  def _to_jsonable(value: Any) -> Any:
+    if hasattr(value, "tolist"):
+      return value.tolist()
+    if isinstance(value, (np.generic,)):
+      return value.item()
+    return value
+  minimum = _to_jsonable(getattr(spec_obj, "minimum", None))
+  maximum = _to_jsonable(getattr(spec_obj, "maximum", None))
   return SpecField(name=name, shape=shape, dtype=dtype, minimum=minimum, maximum=maximum)
 
 
