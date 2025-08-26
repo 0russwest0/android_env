@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import contextlib
 import os
+import subprocess
 import typing
 from typing import Any
 
@@ -352,7 +353,11 @@ async def get_observation(app_env: AndroidEnvDep, include_pixels: bool = False):
 
 
 @app.get("/screenshot")
-async def get_screenshot(app_env: AndroidEnvDep, flatten: bool = True):
+async def get_screenshot(app_env: AndroidEnvDep):
+  """Returns the latest screenshot encoded as PNG bytes.
+
+  Default PNG response is faster and smaller than JSON arrays.
+  """
   obs = app_env.raw_observation
   pixels = np.asarray(obs.get("pixels")) if obs else None
   if pixels is None:
@@ -360,10 +365,16 @@ async def get_screenshot(app_env: AndroidEnvDep, flatten: bool = True):
     ts = app_env.reset()
     pixels = np.asarray(ts.observation.get("pixels")) if ts.observation is not None else None
   if pixels is None:
-    return {"pixels": []}
-  if flatten:
-    return {"pixels": pixels.flatten().tolist()}
-  return {"pixels": pixels.tolist()}
+    raise fastapi.HTTPException(status_code=404, detail="No pixels available")
+  try:
+    import io
+    from PIL import Image  # type: ignore
+    img = Image.fromarray(np.asarray(pixels, dtype=np.uint8))
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    return fastapi.Response(content=buf.getvalue(), media_type="image/png")
+  except Exception as exc:  # pylint: disable=broad-except
+    raise fastapi.HTTPException(status_code=501, detail=f"PNG encoding unavailable: {exc}")
 
 
 @app.get("/stats")
@@ -402,10 +413,33 @@ async def close(request: fastapi.Request):
 @app.get("/health")
 async def health(request: fastapi.Request):
   env = request.app.state.android_env
-  return {"initialized": isinstance(env, ae_interface.AndroidEnvInterface)}
+  initialized = isinstance(env, ae_interface.AndroidEnvInterface)
+  healthy = initialized
+  # Best-effort ADB readiness checks to avoid false positives
+  try:
+    adb_path = os.environ.get("ADB_PATH", "/opt/android/platform-tools/adb")
+    # Check adb devices has an emulator entry
+    devices_proc = subprocess.run(
+        [adb_path, "devices"], capture_output=True, text=True, timeout=3
+    )
+    devices_out = devices_proc.stdout.lower() if devices_proc.stdout else ""
+    has_emulator = "emulator-" in devices_out
+    # Check boot completed
+    boot_proc = subprocess.run(
+        [adb_path, "shell", "getprop", "sys.boot_completed"],
+        capture_output=True,
+        text=True,
+        timeout=3,
+    )
+    boot_ok = boot_proc.stdout.strip() == "1"
+    healthy = initialized and has_emulator and boot_ok
+  except Exception:
+    # If adb check fails, report not healthy
+    healthy = False
+  return {"healthy": bool(healthy)}
 
 
 if __name__ == "__main__":
-  uvicorn.run(app, host="0.0.0.0", port=5000)
+  uvicorn.run(app, host="0.0.0.0", port=5000, timeout_keep_alive=60)
 
 

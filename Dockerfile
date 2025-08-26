@@ -32,7 +32,7 @@ ARG USE_HOST_SDK="true"
 # Set JAVA_HOME - SDK
 #==============================
 ENV ANDROID_SDK_ROOT=/opt/android
-ENV PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/tools:$ANDROID_SDK_ROOT/cmdline-tools/tools/bin:$ANDROID_SDK_ROOT/emulator:$ANDROID_SDK_ROOT/tools/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/build-tools/${BUILD_TOOLS}"
+ENV PATH="$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/cmdline-tools/tools:$ANDROID_SDK_ROOT/cmdline-tools/tools/bin:$ANDROID_SDK_ROOT/emulator:$ANDROID_SDK_ROOT/tools/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/build-tools/${BUILD_TOOLS}"
 ENV DOCKER="true"
 ENV EMULATOR_PACKAGE=${EMULATOR_PACKAGE}
 VOLUME ["/opt/android"]
@@ -121,7 +121,7 @@ RUN chmod a+x docker_setup/start_emu.sh && \
 # Install android_env python package
 RUN uv pip install . --system
 # FastAPI/uvicorn are not part of android_env's dependencies; install here
-RUN uv pip install fastapi uvicorn --system
+RUN uv pip install fastapi uvicorn pillow --system
 
 #=======================
 # framework entry point

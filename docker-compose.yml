@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  envpool-manager:
+    build:
+      context: .
+      dockerfile: pool_manager/Dockerfile
+    image: envpool-manager:latest
+    container_name: envpool-manager
+    restart: unless-stopped
+    environment:
+      MANAGER_HOST: 0.0.0.0
+      MANAGER_PORT: 8080
+      ANDROID_ENV_IMAGE: "android-env"
+      POOL_TARGET: 36
+      POOL_MIN_IDLE: 4
+      POOL_MAX: 40
+      CONTAINER_CPUS: 3
+      CONTAINER_MEM: 6g
+      ENABLE_KVM: "true"
+      USE_PRIVILEGED: "false"
+      DEFAULT_TASK_PATH: "/tasks/dummy.textproto"
+      AUTOLOAD_MODE: emulator
+      DOCKER_NETWORK: android-env-net
+      SDK_VOLUME: android-sdk
+      PORT_RANGE_START: 5000
+      PORT_RANGE_END: 5100
+      DIRECT_HOST: "47.86.173.81"
+    ports:
+      - "8080:8080"
+    networks:
+      - android-env-net
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - android-sdk:/var/lib/android-sdk-cache # SDK cache named volume used for env containers
+    privileged: false
+
+networks:
+  android-env-net:
+    name: android-env-net
+
+volumes:
+  android-sdk:
+    name: android-sdk
+
+

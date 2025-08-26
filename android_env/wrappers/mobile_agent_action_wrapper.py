@@ -80,7 +80,7 @@ def _split_words_and_newlines(text: str) -> Iterable[str]:
 class MobileAgentActionWrapper(base_wrapper.BaseWrapper):
   """AndroidEnv wrapper adapting the Mobile Agent action space via ADB."""
 
-  def __init__(self, env, *, post_action_sleep_sec: float = 0.0) -> None:
+  def __init__(self, env, *, post_action_sleep_sec: float = 2.0) -> None:
     super().__init__(env)
     self._display_width_px, self._display_height_px = self._get_screen_dimensions()
     self._post_action_sleep_sec = float(post_action_sleep_sec)
@@ -215,7 +215,7 @@ class MobileAgentActionWrapper(base_wrapper.BaseWrapper):
     adb_request = adb_pb2.AdbRequest()
     adb_request.tap.x = x
     adb_request.tap.y = y
-    adb_request.timeout_sec = 5.0
+    adb_request.timeout_sec = 10.0
 
     try:
       response = self.execute_adb_call(adb_request)
@@ -236,7 +236,7 @@ class MobileAgentActionWrapper(base_wrapper.BaseWrapper):
     adb_request.generic.args.extend([
         'shell', 'input', 'swipe', str(x), str(y), str(x), str(y), str(duration_ms)
     ])
-    adb_request.timeout_sec = 5.0
+    adb_request.timeout_sec = 10.0
 
     try:
       response = self.execute_adb_call(adb_request)
@@ -261,7 +261,7 @@ class MobileAgentActionWrapper(base_wrapper.BaseWrapper):
     if duration_ms > 0:
       args.append(str(duration_ms))
     adb_request.generic.args.extend(args)
-    adb_request.timeout_sec = 5.0
+    adb_request.timeout_sec = 10.0
 
     try:
       response = self.execute_adb_call(adb_request)
@@ -288,7 +288,7 @@ class MobileAgentActionWrapper(base_wrapper.BaseWrapper):
       logging.info('Typing word: %r', formatted)
       adb_request = adb_pb2.AdbRequest()
       adb_request.input_text.text = formatted
-      adb_request.timeout_sec = 5.0
+      adb_request.timeout_sec = 10.0
 
       try:
         response = self.execute_adb_call(adb_request)
@@ -322,7 +322,7 @@ class MobileAgentActionWrapper(base_wrapper.BaseWrapper):
 
     adb_request = adb_pb2.AdbRequest()
     adb_request.generic.args.extend(['shell', 'input', 'keyevent', key_mapping[key_name]])
-    adb_request.timeout_sec = 5.0
+    adb_request.timeout_sec = 10.0
 
     try:
       response = self.execute_adb_call(adb_request)
@@ -346,7 +346,7 @@ class MobileAgentActionWrapper(base_wrapper.BaseWrapper):
 
     adb_request = adb_pb2.AdbRequest()
     adb_request.press_button.button = self._system_button_mapping[button_name]
-    adb_request.timeout_sec = 5.0
+    adb_request.timeout_sec = 10.0
 
     try:
       response = self.execute_adb_call(adb_request)

@@ -57,6 +57,8 @@ class MobileAgentActionWrapperTest(absltest.TestCase):
     self.base_env.observation_spec.return_value = {
         'pixels': _DummySpec((2340, 1080, 3))
     }
+    # Ensure stats() returns a real dict like a real env would, not a MagicMock.
+    self.base_env.stats.return_value = {}
 
   def test_action_spec_fields(self):
     wrapped_env = mobile_agent_action_wrapper.MobileAgentActionWrapper(
