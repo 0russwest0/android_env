@@ -147,6 +147,8 @@ class ContainerRecord:
     lease_expiry_ts: float | None = None
     worker_id: str | None = None
     cpuset_cores: list[int] | None = None
+    # Timestamp when env became idle and available for leasing
+    available_since: float | None = None
 
 
 class EnvPoolState:
@@ -250,8 +252,29 @@ class EnvPoolState:
         now = time.time()
         # Fast path: atomically pick and reserve an idle env
         async with self._lock:
-            for cid, rec in self._records.items():
-                if rec.status == "idle":
+            candidates = [r for r in self._records.values() if r.status == "idle"]
+            if candidates:
+                # Prefer the env that has been idle the longest (released earliest)
+                candidates.sort(key=lambda r: (r.available_since if r.available_since is not None else r.created_at))
+                # Iterate over candidates until we find a healthy one
+                healthy_rec: ContainerRecord | None = None
+                for c in candidates:
+                    base_host = c.network_ip or self._hostname
+                    probe_port = 5000 if c.network_ip else c.host_port
+                    url = f"http://{base_host}:{probe_port}{HEALTH_PATH}"
+                    is_healthy = False
+                    try:
+                        r = await self._client_session.get(url)
+                        if r.status_code == 200:
+                            data = r.json()
+                            is_healthy = bool(data.get("healthy", False))
+                    except Exception:
+                        is_healthy = False
+                    if is_healthy:
+                        healthy_rec = c
+                        break
+                if healthy_rec is not None:
+                    rec = healthy_rec
                     lease_id = str(uuid.uuid4())
                     rec.status = "leased"
                     rec.lease_id = lease_id
@@ -267,8 +290,28 @@ class EnvPoolState:
                 raise HTTPException(status_code=503, detail="No envs available")
         await self._create_container()
         async with self._lock:
-            for cid, rec in self._records.items():
-                if rec.status == "idle":
+            candidates = [r for r in self._records.values() if r.status == "idle"]
+            if candidates:
+                candidates.sort(key=lambda r: (r.available_since if r.available_since is not None else r.created_at))
+                # Iterate to find a healthy candidate
+                healthy_rec: ContainerRecord | None = None
+                for c in candidates:
+                    base_host = c.network_ip or self._hostname
+                    probe_port = 5000 if c.network_ip else c.host_port
+                    url = f"http://{base_host}:{probe_port}{HEALTH_PATH}"
+                    is_healthy = False
+                    try:
+                        r = await self._client_session.get(url)
+                        if r.status_code == 200:
+                            data = r.json()
+                            is_healthy = bool(data.get("healthy", False))
+                    except Exception:
+                        is_healthy = False
+                    if is_healthy:
+                        healthy_rec = c
+                        break
+                if healthy_rec is not None:
+                    rec = healthy_rec
                     lease_id = str(uuid.uuid4())
                     rec.status = "leased"
                     rec.lease_id = lease_id
@@ -305,6 +348,7 @@ class EnvPoolState:
             rec.lease_id = None
             rec.worker_id = None
             rec.lease_expiry_ts = None
+            rec.available_since = time.time()
             host_port = rec.host_port
             network_ip = rec.network_ip
         logger.info(
@@ -501,6 +545,7 @@ class EnvPoolState:
                     rec.lease_id = None
                     rec.worker_id = None
                     rec.lease_expiry_ts = None
+                    rec.available_since = now
             
             # skip health check for leased envs
             if rec.status == "leased":
@@ -538,6 +583,7 @@ class EnvPoolState:
                             await self._restart_container(rec.container_id)
                             continue
                     rec.status = "idle"
+                    rec.available_since = now
                     logger.info(f"Container {rec.container_id} ({rec.name}) transitioned from 'starting' to 'idle'")
             else:
                 # If stuck in starting for too long or idle but unhealthy, restart
