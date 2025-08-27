@@ -4,7 +4,7 @@ set -euo pipefail
 # Ensure PATH contains potential cmdline-tools locations
 export PATH="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/cmdline-tools/tools/bin:$ANDROID_SDK_ROOT/platform-tools:$ANDROID_SDK_ROOT/emulator:$PATH"
 
-ANDROID_CMD_DEFAULT="commandlinetools-linux-11076708_latest.zip"
+ANDROID_CMD_DEFAULT="commandlinetools-linux-13114758_latest.zip"
 SDK_PKGS_DEFAULT="${EMULATOR_PACKAGE:-} platform-tools emulator"
 
 SDKMGR=""

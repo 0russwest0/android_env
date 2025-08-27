@@ -109,10 +109,13 @@ ENV PATH="$PATH:/root/.local/bin"
 #=========================
 # Copying Scripts and Code
 #=========================
-COPY . /
+COPY android_env /android_env
+COPY server /server
+COPY docker_setup /docker_setup
+COPY tasks /tasks
+COPY setup.py pyproject.toml LICENSE README.md /
 
-RUN chmod a+x docker_setup/start_emu.sh && \
-    chmod a+x docker_setup/start_emu_headless.sh && \
+RUN chmod a+x docker_setup/start_emu_headless.sh && \
     chmod a+x docker_setup/entrypoint.sh
 
 #====================================
