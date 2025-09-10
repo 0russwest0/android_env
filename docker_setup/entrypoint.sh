@@ -83,9 +83,8 @@ ensure_cmdline_tools
 ensure_sdk_packages
 ensure_avd
 
-# Start Emulator headless then start server
-./docker_setup/start_emu_headless.sh
-adb root || true
-python3 -m server.android_server | cat
-
-
+# Start Emulator
+#============================================
+./docker_setup/start_emu_headless.sh && \
+adb root && \
+python3 -m server.android_server
